@@ -279,7 +279,41 @@ void imAcqVidSetNextFrameNumber(ImAcq *imAcq, int nFrame)
     cvSetCaptureProperty(imAcq->capture , CV_CAP_PROP_POS_FRAMES, nFrame - 2.0);
 }
 
+/*
+OK, you caught us.  Video playback under linux is still just bad.  Part of this is due to FFMPEG, part of this
+is due to lack of standards in video files.  But the position slider here will often not work. We tried to at least
+find number of frames using the "getAVIFrames" hack below.  Terrible.  But, this file shows something of how to
+put a slider up and play with it.  Sorry.
+*/
+//Hack because sometimes the number of frames in a video is not accessible.
+//Probably delete this on Widows
+int getAVIFrames(const char * fname) {
+    char tempSize[4];
+    // Trying to open the video file
+    ifstream  videoFile;
+    videoFile.open( fname , ios::in | ios::binary );
+    // Checking the availablity of the file
+    if ( !videoFile ) {
+        std::cout << "Couldn’t open the input file " << fname << std::endl;
+      exit( 1 );
+    }
+    // get the number of frames
+    videoFile.seekg( 0x30 , ios::beg );
+    videoFile.read( tempSize , 4 );
+    int frames = (unsigned char ) tempSize[0] + 0x100*(unsigned char ) tempSize[1] + 0x10000*(unsigned char ) tempSize[2] +    0x1000000*(unsigned char ) tempSize[3];
+    videoFile.close(  );
+    return frames;
+}
+
 int imAcqVidGetNumberOfFrames(ImAcq *imAcq)
 {
-    return ((int) cvGetCaptureProperty(imAcq->capture , CV_CAP_PROP_FRAME_COUNT));
+    fprintf(stderr," %d <---\n",cvGetCaptureProperty(imAcq->capture , CV_CAP_PROP_FRAME_COUNT));
+    fprintf(stderr," %d <---\n",(int)cvGetCaptureProperty(imAcq->capture , CV_CAP_PROP_FRAME_COUNT));
+    fprintf(stderr," %d <---\n",(int)getAVIFrames(imAcq->imgPath));
+    // return ((int) cvGetCaptureProperty(imAcq->capture , CV_CAP_PROP_FRAME_COUNT));
+     return getAVIFrames(imAcq->imgPath);
+
 }
+
+
+
